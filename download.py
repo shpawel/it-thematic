@@ -7,15 +7,8 @@ import random
 import vars
 
 
-def get_object(id):
-    response = requests.get(vars.PROVIDER_URL % id)
-    if response.status_code == 404:
-        return 404
-    else:
-        return response
-
-
 def get_provider_id(provider):
+    """ Получаем id нужных нам провайдеров """
     response = requests.get(vars.PROVIDERS_LIST_URL+'?search='+provider)
     answer = json.loads(response.text)
     return answer['results'][0]['id']
@@ -159,10 +152,6 @@ def log(result, name):
     vars.log_row_counter += 1
 
 
-def delete(provider):
-    response = requests.delete(vars.DELETE_URL % provider)
-
-
 if __name__ == "__main__":
     """ Словарь прочитанных 'id родителя' """
     id_dict = {}
@@ -172,7 +161,6 @@ if __name__ == "__main__":
     point_id = get_provider_id(vars.PROCUREMENT_POINT)
     phone_id = get_provider_id(vars.TELEPHONE)
 
-    delete(inf_obj_id)
 
     """ Открытие файла как словарь """
     with open('input.csv', encoding='utf-8-sig') as f_obj:
