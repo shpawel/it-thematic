@@ -175,13 +175,14 @@ if __name__ == "__main__":
                 """ Создается Информационный объект типа PROCUREMENT_POINT (point=True) """
                 inf_obj_point_response = create_object(inf_obj_id, line, point=True)
 
-                """ От которого наследуется Пункт заготовки """
+                """ Чтобы от него наследоваться, нужно сохранить id """
                 try:
                     current_inf_obj_point = inf_obj_point_response['id']
                 except:
                     """ Исключение срабатывает в случае не 201 ответа """
                     current_inf_obj_point = None
 
+                """ Создается наследуемый Пункт заготовки """
                 point_response = create_object(point_id, line)
 
                 try:
@@ -197,7 +198,6 @@ if __name__ == "__main__":
                 if result != 'OK':
                     """ Если функция вернула ошибки, значит в создании объектов нет смысла. Удаляем """
                     requests.delete(vars.FEATURES_URL % inf_obj_id + str(current_inf_obj_point))
-                    requests.delete(vars.FEATURES_URL % inf_obj_id + str(current_point))
 
             else:
                 """ Создание информационного объекта типа ORGANIZATION """
