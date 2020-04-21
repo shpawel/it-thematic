@@ -8,21 +8,50 @@ PROVIDER_URL = PROVIDERS_LIST_URL+'%i/'
 FEATURES_URL = PROVIDER_URL+'features/'
 DELETE_URL = FEATURES_URL+'purge/'
 
-""" PROVIDER'S NAME """
+""" PROVIDERS INFO """
 INFORMATION_OBJECT = 'ikpz_informationobject'
 ORGANIZATION = 'ikpz_organization'
-PROCUREMENT_POINT = 'ikpz_procurementpoint'
+PROCUREMENT_POINT = 'PROCUREMENT_POINT'
 TELEPHONE = 'ikpz_telephone'
 
+PROVIDER_INF_OBJ_ID = 4
+PROVIDER_ORG_ID = 5
+PROVIDER_POINT_ID = 6
+PROVIDER_PHONE_ID = 10
+
+PROVIDER_NAME = 'name'
+PROVIDER_EMAIL = 'email'
+PROVIDER_ADDRESS = 'address'
+PROVIDER_GEOM = 'geom'
+PROVIDER_ADDITIONAL_INFO = 'additional_info'
+PROVIDER_TYPE_OF_OBJECT = 'type_of_object'
+
+PROVIDER_INF_OBJ = 'information_object'
+PROVIDER_FULL_NAME = 'full_name'
+PROVIDER_ADDRESS_OF_ORGANIZATION = 'address_of_organization'
+PROVIDER_TYPE_OF_ORGANIZATION = 'type_of_organization'
+PROVIDER_OGRN = 'ogrn'
+PROVIDER_INN = 'inn'
+PROVIDER_ANNUAL_REVENUE = 'annual_revenue'
+PROVIDER_URL = 'url'
+
+PROVIDER_ANNUAL_VOLUME = 'annual_volume'
+PROVIDER_STATUS = 'status'
+PROVIDER_ORGANIZATION = 'organization'
+
+PROVIDER_TYPE_OF_PHONE = 'type_of_phone'
+PROVIDER_VALUE = 'value'
+
+
 """ FIELDS """
-NAME = 'Наименование'
-EMAIL = 'Емайл'
-PHONE = 'Телефон1'
-SITE = 'Сайт'
-ID = 'id'
-PARENT_ID = 'id родителя'
-ADDRESS = 'Адрес'
-GEOM = 'местоположение'
+INPUT_NAME = 'Наименование'
+INPUT_EMAIL = 'Емайл'
+INPUT_PHONE = 'Телефон1'
+INPUT_SITE = 'Сайт'
+INPUT_ID = 'id'
+INPUT_PARENT_ID = 'id родителя'
+INPUT_ADDRESS = 'Адрес'
+INPUT_GEOM = 'местоположение'
 
 
 

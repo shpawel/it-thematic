@@ -1,17 +1,12 @@
 import csv
 import requests
 import json
+import string
 import math
 import random
+import logging
 
 import vars
-
-
-def get_provider_id(provider):
-    """ Получаем id нужных нам провайдеров """
-    response = requests.get(vars.PROVIDERS_LIST_URL+'?search='+provider)
-    answer = json.loads(response.text)
-    return answer['results'][0]['id']
 
 
 def get_num(length):
@@ -40,85 +35,85 @@ def create_object(id, line, point=False):
     """
 
     """ Если передан id провайдера 'Информационный объект' """
-    if id == inf_obj_id:
+    if id == vars.PROVIDER_INF_OBJ_ID:
         """ Происходит его наполнение """
         param_dict = fill_inf_obj(line, point)
         """ POST запрос на создание объекта """
-        response = request(id, param_dict)
-        return response
+        response, new_obj_id = request(id, param_dict)
+        return response, new_obj_id
 
     """ Если передан id провайдера 'Заготовитель' """
-    if id == org_id:
+    if id == vars.PROVIDER_ORG_ID:
         param_dict = fill_org(line)
-        response = request(id, param_dict)
-        return response
+        response, new_obj_id = request(id, param_dict)
+        return response, new_obj_id
 
     """ Если передан id провайдера 'Пункт заготовки' """
-    if id == point_id:
+    if id == vars.PROVIDER_POINT_ID:
         param_dict = fill_point(line)
-        response = request(id, param_dict)
-        return response
+        response, new_obj_id = request(id, param_dict)
+        return response, new_obj_id
 
     """ Если передан id провайдера 'Телефон' """
-    if id == phone_id:
+    if id == vars.PROVIDER_PHONE_ID:
         param_dict = fill_phone(line)
-        response = request(id, param_dict)
+        response, new_obj_id = request(id, param_dict)
         return response
 
 
 def fill_inf_obj(line, point):
-    additional_info_dict = {'id2gis': line[vars.ID]}
+    additional_info_dict = {'id2gis': line[vars.INPUT_ID]}
     additional_info = json.dumps(additional_info_dict)
     param_dict = {
-        'name': line[vars.NAME],
-        'email': line[vars.EMAIL],
-        'address': line[vars.ADDRESS],
-        'geom': line[vars.GEOM],
-        'additional_info': additional_info
+        vars.PROVIDER_NAME: line[vars.INPUT_NAME],
+        vars.PROVIDER_EMAIL: line[vars.INPUT_EMAIL],
+        vars.PROVIDER_ADDRESS: line[vars.INPUT_ADDRESS],
+        vars.PROVIDER_GEOM: line[vars.INPUT_GEOM],
+        vars.PROVIDER_ADDITIONAL_INFO: additional_info
     }
     """ 
     Если передан point=True, значит это ИО типа Пункт заготовки.
     По умолчанию type_of_object=ORGANIZATION (при point=Flase)
     """
     if point:
-        param_dict['type_of_object'] = 'PROCUREMENT_POINT'
+        param_dict[vars.PROVIDER_TYPE_OF_OBJECT] = vars.PROCUREMENT_POINT
     return param_dict
 
 
 def fill_org(line):
     param_dict = {
-        'information_object': current_inf_obj_org,
-        'full_name': line[vars.NAME],
-        'address_of_organization': line[vars.ADDRESS],
-        'type_of_organization': 'ORG',
-        'ogrn': get_num(13),
-        'inn': get_num(10),
-        'annual_revenue': get_num(1)
+        vars.PROVIDER_INF_OBJ: current_inf_obj_org,
+        vars.PROVIDER_FULL_NAME: line[vars.INPUT_NAME],
+        vars.PROVIDER_ADDRESS_OF_ORGANIZATION: line[vars.INPUT_ADDRESS],
+        vars.PROVIDER_TYPE_OF_ORGANIZATION: 'ORG',
+        vars.PROVIDER_OGRN: get_num(13),
+        vars.PROVIDER_INN: get_num(10),
+        vars.PROVIDER_ANNUAL_REVENUE: get_num(1)
     }
     """ Проверка на наличие в csv необязательных параметров (в данном случае только URL) """
-    if line[vars.SITE]:
-        if vars.SITE[0:7] != 'https://' or vars.SITE[0:6] != 'http://':
-            param_dict['url'] = 'https://' + line[vars.SITE]
+    if line[vars.INPUT_SITE]:
+        if vars.INPUT_SITE[0:7] != 'https://' or vars.INPUT_SITE[0:6] != 'http://':
+            param_dict[vars.PROVIDER_URL] = 'https://' + line[vars.INPUT_SITE]
         else:
-            param_dict['url'] = line[vars.SITE]
+            param_dict[vars.PROVIDER_URL] = line[vars.INPUT_SITE]
     return param_dict
 
 
 def fill_point(line):
     param_dict = {
-        'information_object': current_inf_obj_point,
-        'organization': current_org,
-        'annual_volume': get_num(1),
-        'status': 'LEGAL'
+        vars.PROVIDER_INF_OBJ: current_inf_obj_point,
+        vars.PROVIDER_ORGANIZATION: current_org,
+        vars.PROVIDER_ANNUAL_VOLUME: get_num(1),
+        vars.PROVIDER_STATUS: 'LEGAL'
     }
     return param_dict
 
 
 def fill_phone(line):
     param_dict = {
-        'information_object': current_inf_obj_point,
-        'type_of_phone': 'ACCOUNTING',
-        'value': line[vars.PHONE]
+        vars.PROVIDER_INF_OBJ: current_inf_obj_point,
+        vars.PROVIDER_TYPE_OF_PHONE: 'ACCOUNTING',
+        vars.PROVIDER_VALUE: line[vars.INPUT_PHONE]
     }
     return param_dict
 
@@ -129,13 +124,13 @@ def request(id, param_dict):
     if response.status_code != 201:
         """ Во избежания дальнейших ошибок, возвращаем new_obj_id = None """
         new_obj_id = None
-        return {'response': response, 'new_obj_id': new_obj_id}
+        return response, new_obj_id
     answer = response.json()
     new_obj_id = answer['id']
-    return {'response': answer, 'new_obj_id': new_obj_id}
+    return answer, new_obj_id
 
 
-def responses_result(*responses):
+def responses_result(name, *responses):
     """
     Функция возвращает общий результат ответов.
     Успешный ответ приходит словарём.
@@ -144,38 +139,54 @@ def responses_result(*responses):
         if not isinstance(response, dict) and response is not None:
             """ 
             Но если приходит не словарь, значит была ошибка.
-            Тогда преобразуем ответ в словарь
+            Тогда вырисовывется вилка...
             """
-            answer_dict = json.loads(response.text)
-            """ 
-            Так как ошибка может быть по нескольким полям,
-            Получаем ключи и перебераем по ним ошибку 
-            """
-            answer_keys = answer_dict.keys()
-            string = 'error\n'
-            for key in answer_keys:
-                """ Собираем строку и возвращаем ее для будущего лога """
-                string += key + ' - ' + answer_dict[key][0] + ' '
-            return string
-    return 'OK'
+            try:
+                """ Четырехсотые ответы без труда будут преобразованы """
+                answer_dict = json.loads(response.text)
+                """ 
+                Так как ошибка может быть по нескольким полям,
+                Получаем ключи и перебераем по ним ошибку 
+                """
+                answer_keys = answer_dict.keys()
+                string = ''
+                for key in answer_keys:
+                    """ Собираем строку и возвращаем ее для будущего лога """
+                    string += key + ' - ' + answer_dict[key][0] + ' '
+                logger.info(name + '...' + string)
+                return False
+
+            except:
+                """ 
+                А вот 500+ ответы приходят строкой, 
+                с преобразованием которой возникают сложности.
+                Поэтому ищем индекс слова ОШИБКА 
+                и срезаем всю его строку
+                """
+                str = response.text
+                index_start = str.find('ОШИБКА')
+                index_end = str.find('\n', index_start)
+                string = str[index_start:index_end]
+                logger.error(name + '...' + string)
+                logger.debug(name + '\n' + response.text)
+                return False
+    logger.info(name + '...OK')
+    return True
 
 
-def log(result, name):
+"""def log(result, name):
     f = open('log.txt', 'a+')
     f.write(str(vars.log_row_counter) + '. ' + name + '...' + result + '\n')
     f.close()
     vars.log_row_counter += 1
-
+"""
 
 if __name__ == "__main__":
+    logging.basicConfig(filename='log.txt', filemode='w', format='%(levelname)s - %(message)s', level='INFO')
+    logging.getLogger('urllib3').setLevel('CRITICAL')
+    logger = logging.getLogger()
     """ Словарь прочитанных 'id родителя' """
     id_dict = {}
-    """ Получение id провайдераов, согласно описанию подхода управления данными """
-    inf_obj_id = get_provider_id(vars.INFORMATION_OBJECT)
-    org_id = get_provider_id(vars.ORGANIZATION)
-    point_id = get_provider_id(vars.PROCUREMENT_POINT)
-    phone_id = get_provider_id(vars.TELEPHONE)
-
 
     """ Открытие файла как словарь """
     with open('input.csv', encoding='utf-8-sig') as f_obj:
@@ -183,58 +194,45 @@ if __name__ == "__main__":
         """ Построчная работа со словарём """
         for line in reader:
             """ Если id родителя уже читался """
-            if line[vars.PARENT_ID] in id_dict:
+            if line[vars.INPUT_PARENT_ID] in id_dict:
                 """ Для Заготовителя, id которого содержится в словаре """
-                current_org = id_dict[line[vars.PARENT_ID]]['org_id']
+                current_org = id_dict[line[vars.INPUT_PARENT_ID]]['org_id']
 
                 """ Создается Информационный объект типа PROCUREMENT_POINT (point=True) """
-                response = create_object(inf_obj_id, line, point=True)
-                inf_obj_point_response = response['response']
-                current_inf_obj_point = response['new_obj_id']
+                inf_obj_point_response, current_inf_obj_point = create_object(vars.PROVIDER_INF_OBJ_ID, line, point=True)
 
                 """ Создается наследуемый Пункт заготовки """
-                point_response = create_object(point_id, line)
-                point_response = response['response']
-                current_point = response['new_obj_id']
+                point_response, current_point = create_object(vars.PROVIDER_POINT_ID, line)
 
                 """ Ответы передаются в функцию, которая возвращает ОК или текст ошибки """
-                result = responses_result(inf_obj_point_response, point_response)
-                log(result, line[vars.NAME])
+                result = responses_result(line[vars.INPUT_NAME], inf_obj_point_response, point_response)
 
-                if result != 'OK':
+                if result:
                     """ Если функция вернула ошибки, значит в создании объектов нет смысла. Удаляем """
-                    requests.delete(vars.FEATURES_URL % inf_obj_id + str(current_inf_obj_point))
+                    requests.delete(vars.FEATURES_URL % vars.PROVIDER_INF_OBJ_ID + str(current_inf_obj_point))
 
             else:
                 """ Создание информационного объекта типа ORGANIZATION """
-                response = create_object(inf_obj_id, line)
-                inf_obj_org_response = response['response']
-                current_inf_obj_org = response['new_obj_id']
+                inf_obj_org_response, current_inf_obj_org = create_object(vars.PROVIDER_INF_OBJ_ID, line)
 
                 """ Создание информационного объекта типа PROCUREMENT_POINT """
-                response = create_object(inf_obj_id, line, point=True)
-                inf_obj_point_response = response['response']
-                current_inf_obj_point = response['new_obj_id']
+                inf_obj_point_response, current_inf_obj_point = create_object(vars.PROVIDER_INF_OBJ_ID, line, point=True)
 
                 """ Создание Заготовителя """
-                response = create_object(org_id, line)
-                org_response = response['response']
-                current_org = response['new_obj_id']
+                org_response, current_org = create_object(vars.PROVIDER_ORG_ID, line)
 
                 """ Создание Пункта заготовки """
-                response = create_object(point_id, line)
-                point_response = response['response']
-                current_point = response['new_obj_id']
+                point_response, current_point = create_object(vars.PROVIDER_POINT_ID, line)
 
                 """ Добавление телефона, если имеется """
                 phone_response = None
-                if line[vars.PHONE]:
-                    phone_response = create_object(phone_id, line)
+                if line[vars.INPUT_PHONE]:
+                    phone_response = create_object(vars.PROVIDER_PHONE_ID, line)
 
                 """ Результат - строка, которая запишется в лог """
-                result = responses_result(inf_obj_org_response, inf_obj_point_response, org_response, point_response, phone_response)
-                log(result, line[vars.NAME])
-                if result == 'OK':
+                result = responses_result(line[vars.INPUT_NAME], inf_obj_org_response, inf_obj_point_response, org_response,
+                                          point_response, phone_response)
+                if result:
                     """ 
                     Так как этот id родителя встречается впервые,
                     и введенные данные - валидны, 
@@ -246,14 +244,14 @@ if __name__ == "__main__":
                     { 
                         int(id родителя): # Числовой id родителя из csv
                             { 
-                                # id Информационного объекта типа Заготовитель
-                                'inf_obj_org_id': int(current_inf_obj_org),
+                                # id Заготовителя
+                                'org_id': int(current_inf_obj_org),
                                 # id Информационного объекта типа Пункт заготовки
                                 'inf_obj_point_id': int(current_inf_obj_point) 
                             }
                     }
                     """
-                    id_dict[line[vars.PARENT_ID]] = {
+                    id_dict[line[vars.INPUT_PARENT_ID]] = {
                         'org_id': current_org,
                         'inf_obj_point_id': current_inf_obj_point
                     }
@@ -263,5 +261,5 @@ if __name__ == "__main__":
                     Если result хотя бы по одному объекту возвращает error, 
                     тогда удаляются все раннее созданные объекты
                     """
-                    requests.delete(vars.FEATURES_URL % inf_obj_id  + str(current_inf_obj_point))
-                    requests.delete(vars.FEATURES_URL % inf_obj_id  + str(current_inf_obj_org))
+                    requests.delete(vars.FEATURES_URL % vars.PROVIDER_INF_OBJ_ID + str(current_inf_obj_point))
+                    requests.delete(vars.FEATURES_URL % vars.PROVIDER_INF_OBJ_ID + str(current_inf_obj_org))
