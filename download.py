@@ -35,89 +35,104 @@ def create_object(id, line, point=False):
     Функция определяет какой объект нужно создать
     из списка провайдеров и создает его.
     ИО/Заготовитель/ПЗ/Телефон
+    В итоге выполнения вложенной функции request()
+    возвращает { 'response': ответ, 'new_obj_id': id вновь созданного объекта }
     """
 
     """ Если передан id провайдера 'Информационный объект' """
     if id == inf_obj_id:
         """ Происходит его наполнение """
-        additional_info_dict = { 'id2gis': line[vars.ID] }
-        additional_info = json.dumps(additional_info_dict)
-        param_dict = {
-            'name': line[vars.NAME],
-            'email': line[vars.EMAIL],
-            'address': line[vars.ADDRESS],
-            'geom': line[vars.GEOM],
-            'additional_info': additional_info
-        }
-        """ 
-        Если передан point=True, значит это ИО типа Пункт заготовки.
-        По умолчанию type_of_object=ORGANIZATION (при point=Flase)
-        """
-        if point:
-            param_dict['type_of_object'] = 'PROCUREMENT_POINT'
-
-        response = requests.post(vars.FEATURES_URL % id, data=param_dict)
-        if response.status_code != 201:
-            return response
-        answer = json.loads(response.text)
-
-        """ Возврат id только созданного ИО """
-        return answer
+        param_dict = fill_inf_obj(line, point)
+        """ POST запрос на создание объекта """
+        response = request(id, param_dict)
+        return response
 
     """ Если передан id провайдера 'Заготовитель' """
     if id == org_id:
-        """ Происходит его наполнение """
-        param_dict = {
-            'information_object': current_inf_obj_org,
-            'full_name': line[vars.NAME],
-            'address_of_organization': line[vars.ADDRESS],
-            'type_of_organization': 'ORG',
-            'ogrn': get_num(13),
-            'inn': get_num(10),
-            'annual_revenue': get_num(1)
-        }
-        """ Проверка на наличие в csv необязательных параметров (в данном случае только URL) """
-        if line[vars.SITE]:
-            if vars.SITE[0:7] != 'https://' or vars.SITE[0:6] != 'http://':
-                param_dict['url'] = 'https://' + line[vars.SITE]
-            else:
-                param_dict['url'] = line[vars.SITE]
-
-
-        response = requests.post(vars.FEATURES_URL % id, data=param_dict)
-        if response.status_code != 201:
-            return response
-        answer = json.loads(response.text)
-        return answer
+        param_dict = fill_org(line)
+        response = request(id, param_dict)
+        return response
 
     """ Если передан id провайдера 'Пункт заготовки' """
     if id == point_id:
-        """ Происходит его наполнение """
-        param_dict = {
-            'information_object': current_inf_obj_point,
-            'organization': current_org,
-            'annual_volume': get_num(1),
-            'status': 'LEGAL'
-        }
-        response = requests.post(vars.FEATURES_URL % id, data=param_dict)
-        if response.status_code != 201:
-            return response
-        answer = json.loads(response.text)
-        return answer
+        param_dict = fill_point(line)
+        response = request(id, param_dict)
+        return response
 
     """ Если передан id провайдера 'Телефон' """
     if id == phone_id:
-        """ Происходит его наполнение """
-        param_dict = {
-            'information_object': current_inf_obj_point,
-            'type_of_phone': 'ACCOUNTING',
-            'value': line[vars.PHONE]
-        }
-        response = requests.post(vars.FEATURES_URL % id, data=param_dict)
-        if response.status_code != 201:
-            return response
-        answer = json.loads(response.text)
-        return answer
+        param_dict = fill_phone(line)
+        response = request(id, param_dict)
+        return response
+
+
+def fill_inf_obj(line, point):
+    additional_info_dict = {'id2gis': line[vars.ID]}
+    additional_info = json.dumps(additional_info_dict)
+    param_dict = {
+        'name': line[vars.NAME],
+        'email': line[vars.EMAIL],
+        'address': line[vars.ADDRESS],
+        'geom': line[vars.GEOM],
+        'additional_info': additional_info
+    }
+    """ 
+    Если передан point=True, значит это ИО типа Пункт заготовки.
+    По умолчанию type_of_object=ORGANIZATION (при point=Flase)
+    """
+    if point:
+        param_dict['type_of_object'] = 'PROCUREMENT_POINT'
+    return param_dict
+
+
+def fill_org(line):
+    param_dict = {
+        'information_object': current_inf_obj_org,
+        'full_name': line[vars.NAME],
+        'address_of_organization': line[vars.ADDRESS],
+        'type_of_organization': 'ORG',
+        'ogrn': get_num(13),
+        'inn': get_num(10),
+        'annual_revenue': get_num(1)
+    }
+    """ Проверка на наличие в csv необязательных параметров (в данном случае только URL) """
+    if line[vars.SITE]:
+        if vars.SITE[0:7] != 'https://' or vars.SITE[0:6] != 'http://':
+            param_dict['url'] = 'https://' + line[vars.SITE]
+        else:
+            param_dict['url'] = line[vars.SITE]
+    return param_dict
+
+
+def fill_point(line):
+    param_dict = {
+        'information_object': current_inf_obj_point,
+        'organization': current_org,
+        'annual_volume': get_num(1),
+        'status': 'LEGAL'
+    }
+    return param_dict
+
+
+def fill_phone(line):
+    param_dict = {
+        'information_object': current_inf_obj_point,
+        'type_of_phone': 'ACCOUNTING',
+        'value': line[vars.PHONE]
+    }
+    return param_dict
+
+
+def request(id, param_dict):
+    """ Возврат - словарь, содержащий ответ для лога и id нового объекта для дальнейшей работы """
+    response = requests.post(vars.FEATURES_URL % id, data=param_dict)
+    if response.status_code != 201:
+        """ Во избежания дальнейших ошибок, возвращаем new_obj_id = None """
+        new_obj_id = None
+        return {'response': response, 'new_obj_id': new_obj_id}
+    answer = response.json()
+    new_obj_id = answer['id']
+    return {'response': answer, 'new_obj_id': new_obj_id}
 
 
 def responses_result(*responses):
@@ -173,23 +188,14 @@ if __name__ == "__main__":
                 current_org = id_dict[line[vars.PARENT_ID]]['org_id']
 
                 """ Создается Информационный объект типа PROCUREMENT_POINT (point=True) """
-                inf_obj_point_response = create_object(inf_obj_id, line, point=True)
-
-                """ Чтобы от него наследоваться, нужно сохранить id """
-                try:
-                    current_inf_obj_point = inf_obj_point_response['id']
-                except:
-                    """ Исключение срабатывает в случае не 201 ответа """
-                    current_inf_obj_point = None
+                response = create_object(inf_obj_id, line, point=True)
+                inf_obj_point_response = response['response']
+                current_inf_obj_point = response['new_obj_id']
 
                 """ Создается наследуемый Пункт заготовки """
                 point_response = create_object(point_id, line)
-
-                try:
-                    current_point = point_response['id']
-                except:
-                    """ Исключение срабатывает в случае не 201 ответа """
-                    current_point = None
+                point_response = response['response']
+                current_point = response['new_obj_id']
 
                 """ Ответы передаются в функцию, которая возвращает ОК или текст ошибки """
                 result = responses_result(inf_obj_point_response, point_response)
@@ -201,36 +207,24 @@ if __name__ == "__main__":
 
             else:
                 """ Создание информационного объекта типа ORGANIZATION """
-                inf_obj_org_response = create_object(inf_obj_id, line)
-                try:
-                    current_inf_obj_org = inf_obj_org_response['id']
-                except:
-                    """ Исключение срабатывает в случае не 201 ответа """
-                    current_inf_obj_org = None
+                response = create_object(inf_obj_id, line)
+                inf_obj_org_response = response['response']
+                current_inf_obj_org = response['new_obj_id']
 
                 """ Создание информационного объекта типа PROCUREMENT_POINT """
-                inf_obj_point_response = create_object(inf_obj_id, line, point=True)
-                try:
-                    current_inf_obj_point = inf_obj_point_response['id']
-                except:
-                    """ Исключение срабатывает в случае не 201 ответа """
-                    current_inf_obj_point = None
+                response = create_object(inf_obj_id, line, point=True)
+                inf_obj_point_response = response['response']
+                current_inf_obj_point = response['new_obj_id']
 
                 """ Создание Заготовителя """
-                org_response = create_object(org_id, line)
-                try:
-                    current_org = org_response['id']
-                except:
-                    """ Исключение срабатывает в случае не 201 ответа """
-                    current_org = None
+                response = create_object(org_id, line)
+                org_response = response['response']
+                current_org = response['new_obj_id']
 
                 """ Создание Пункта заготовки """
-                point_response = create_object(point_id, line)
-                try:
-                    current_point = point_response['id']
-                except:
-                    """ Исключение срабатывает в случае не 201 ответа """
-                    current_point = None
+                response = create_object(point_id, line)
+                point_response = response['response']
+                current_point = response['new_obj_id']
 
                 """ Добавление телефона, если имеется """
                 phone_response = None
