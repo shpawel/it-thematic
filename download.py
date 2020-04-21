@@ -10,6 +10,7 @@ import vars
 def get_provider_id(provider):
     """ Получаем id нужных нам провайдеров """
     response = requests.get(vars.PROVIDERS_LIST_URL+'?search='+provider)
+    # у response есть метод который сразу возвращает json, не надо делать преобразование
     answer = json.loads(response.text)
     return answer['results'][0]['id']
 
@@ -29,7 +30,9 @@ def get_num(length):
                 number += str(random.randint(0, 9))
     return int(number)
 
-
+# В это функции используется условных операторов
+# Более правильным будет разделить её на несколько отдельных фукнций
+# Часть кода которая собственно и выполняет запрос можно вынести в отдельную базовую функцию которая принимает url, params
 def create_object(id, line, point=False):
     """
     Функция определяет какой объект нужно создать
@@ -144,7 +147,7 @@ def responses_result(*responses):
             return string
     return 'OK'
 
-
+# Для ведения логов есть встроенный модуль logging с возможностью записи в файл
 def log(result, name):
     f = open('log.txt', 'a+')
     f.write(str(vars.log_row_counter) + '. ' + name + '...' + result + '\n')
@@ -156,6 +159,9 @@ if __name__ == "__main__":
     """ Словарь прочитанных 'id родителя' """
     id_dict = {}
     """ Получение id провайдераов, согласно описанию подхода управления данными """
+    # Можно подготовить конфигурационный файл содержащий информацию о провайдере и его id и читать его при запуске
+    # В его состав включить информацию о провайдере (id, соответствие атрибутов провайдера и полей из файла)
+    # Это сделает скрипт более универсальным и лёгки в настройке под другой набор данных
     inf_obj_id = get_provider_id(vars.INFORMATION_OBJECT)
     org_id = get_provider_id(vars.ORGANIZATION)
     point_id = get_provider_id(vars.PROCUREMENT_POINT)
@@ -175,14 +181,16 @@ if __name__ == "__main__":
                 """ Создается Информационный объект типа PROCUREMENT_POINT (point=True) """
                 inf_obj_point_response = create_object(inf_obj_id, line, point=True)
 
-                """ Чтобы от него наследоваться, нужно сохранить id """
+                """ От которого наследуется Пункт заготовки """
                 try:
                     current_inf_obj_point = inf_obj_point_response['id']
                 except:
+                    # Более правильн выполнять проверку статуса запроса там где он выполняется
+                    # Если при запрос выполненился неправильно, то функция возвращает None, а не отлавливать except здесь
+                    # Тоже самое и в коде ниже
                     """ Исключение срабатывает в случае не 201 ответа """
                     current_inf_obj_point = None
 
-                """ Создается наследуемый Пункт заготовки """
                 point_response = create_object(point_id, line)
 
                 try:
@@ -198,6 +206,7 @@ if __name__ == "__main__":
                 if result != 'OK':
                     """ Если функция вернула ошибки, значит в создании объектов нет смысла. Удаляем """
                     requests.delete(vars.FEATURES_URL % inf_obj_id + str(current_inf_obj_point))
+                    requests.delete(vars.FEATURES_URL % inf_obj_id + str(current_point))
 
             else:
                 """ Создание информационного объекта типа ORGANIZATION """
