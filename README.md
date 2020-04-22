@@ -2,7 +2,7 @@
 
 500 ошибка приходит в следующем виде:
 
-![Скриншот ошибки](https://image.prntscr.com/image/PPcnRWzfRReB4S5pQOTkNA.png)
+[Скриншот ошибки](https://image.prntscr.com/image/PPcnRWzfRReB4S5pQOTkNA.png)
 
  Поэтому преобразование невозможно
 
