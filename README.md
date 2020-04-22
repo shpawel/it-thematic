@@ -1,6 +1,6 @@
 # it-thematic
 
-500 ошибка приходит в следующем виде:
+**500 ошибка** приходит в следующем виде:
 
 [Скриншот ошибки](https://image.prntscr.com/image/PPcnRWzfRReB4S5pQOTkNA.png)
 
