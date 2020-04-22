@@ -5,6 +5,10 @@ import string
 import math
 import random
 import logging
+# добавляем логгер
+
+logger = logging.getLogger(__name__)
+# Добавить к нему FileHandler чтобы писать логи и в файл и в консоли видеть результат
 
 import vars
 
@@ -40,12 +44,15 @@ def create_object(id, line, point=False):
         param_dict = fill_inf_obj(line, point)
         """ POST запрос на создание объекта """
         response, new_obj_id = request(id, param_dict)
+        # сохранение результата работы фукнции
+        # результат возвращается в конце функции
         return response, new_obj_id
-
+    # можно писать `elif` в python тогда не будет проверяться каждое следующее условие если одно сработало
     """ Если передан id провайдера 'Заготовитель' """
     if id == vars.PROVIDER_ORG_ID:
         param_dict = fill_org(line)
         response, new_obj_id = request(id, param_dict)
+        # результат возвращается в конце функции
         return response, new_obj_id
 
     """ Если передан id провайдера 'Пункт заготовки' """
@@ -58,7 +65,10 @@ def create_object(id, line, point=False):
     if id == vars.PROVIDER_PHONE_ID:
         param_dict = fill_phone(line)
         response, new_obj_id = request(id, param_dict)
+        # результат возвращается в конце функции
         return response
+    # возвращение результата работы фукнции
+    # return result
 
 
 def fill_inf_obj(line, point):
@@ -128,7 +138,11 @@ def request(id, param_dict):
     answer = response.json()
     new_obj_id = answer['id']
     return answer, new_obj_id
-
+    """
+    если статус запроса > 299 т.е неудачен, то запись в логгер текста ответа, результат работы фукции - None
+    иначе результат - id нового объекта    
+    """
+    
 
 def responses_result(name, *responses):
     """
@@ -182,8 +196,11 @@ def responses_result(name, *responses):
 """
 
 if __name__ == "__main__":
+    # Обычно в __name__ инициализируют парсинг аргументов, параметры логгера и парсят параметры
+    #   а всё остальное выносится в фукнцию main()
     logging.basicConfig(filename='log.txt', filemode='w', format='%(levelname)s - %(message)s', level='INFO')
     logging.getLogger('urllib3').setLevel('CRITICAL')
+    # Логгер в начало файла
     logger = logging.getLogger()
     """ Словарь прочитанных 'id родителя' """
     id_dict = {}
@@ -194,17 +211,23 @@ if __name__ == "__main__":
         """ Построчная работа со словарём """
         for line in reader:
             """ Если id родителя уже читался """
+            # Сюда можно прописать создание информационного объекта т.к. он создаётся в любом случае
             if line[vars.INPUT_PARENT_ID] in id_dict:
                 """ Для Заготовителя, id которого содержится в словаре """
                 current_org = id_dict[line[vars.INPUT_PARENT_ID]]['org_id']
 
                 """ Создается Информационный объект типа PROCUREMENT_POINT (point=True) """
                 inf_obj_point_response, current_inf_obj_point = create_object(vars.PROVIDER_INF_OBJ_ID, line, point=True)
-
+                # Если результат функции None - сообщение в лог error и обработка следующей строки `continue`
+                #   Нет смысла создавать объекты далее если не создан информационный объект
                 """ Создается наследуемый Пункт заготовки """
                 point_response, current_point = create_object(vars.PROVIDER_POINT_ID, line)
-
+                # Если же в этом месте фукнция вернула None (не создался пункт заготовки), 
+                #   то удаление информационного объекта и переход на обработку новой строки
+                #   удаление инфомационного объекта приводит к удалению всех связных объектов так что не обязательно удалять и точки
+                # И так далее по тексту
                 """ Ответы передаются в функцию, которая возвращает ОК или текст ошибки """
+                # это становится не нужным
                 result = responses_result(line[vars.INPUT_NAME], inf_obj_point_response, point_response)
 
                 if result:
