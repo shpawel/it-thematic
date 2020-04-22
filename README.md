@@ -1,7 +1,7 @@
 # it-thematic
 
 **500 ошибка** приходит в следующем виде: 
-[Скриншот ошибки](https://image.prntscr.com/image/PPcnRWzfRReB4S5pQOTkNA.png)
+[img](https://image.prntscr.com/image/PPcnRWzfRReB4S5pQOTkNA.png)
 
  Поэтому преобразование дает ошибку:
 
