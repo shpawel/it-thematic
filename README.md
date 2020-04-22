@@ -4,7 +4,7 @@
 
 [Скриншот ошибки](https://image.prntscr.com/image/PPcnRWzfRReB4S5pQOTkNA.png)
 
- Поэтому преобразование невозможно
+ Поэтому преобразование дает ошибку:
 
 `json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)`
 
